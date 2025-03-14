@@ -1,0 +1,86 @@
+services:
+  adguardhome:
+    image: "adguard/adguardhome:latest"
+    container_name: "adguard"
+    hostname: "adguard"
+    restart: "unless-stopped"
+    environment:
+      TZ: Asia/Shanghai
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+      - "./adguardhome/work:/opt/adguardhome/work"
+      - "./adguardhome/config:/opt/adguardhome/conf"
+    ports:
+      # Plain DNS
+      - "53:53/tcp"
+      - "53:53/udp"
+      # AdGuard Home Admin Panel as well as DNS-over-HTTPS
+      - "80:80/tcp"
+      - "443:443/tcp"
+      - "443:443/udp"
+      - "3000:3000/tcp"
+      # DNS-over-TLS
+      - "853:853/tcp"
+      # DNS-over-QUIC
+      - "784:784/udp"
+      - "853:853/udp"
+      - "8853:8853/udp"
+      # DNSCrypt
+      - "5443:5443/tcp"
+      - "5443:5443/udp"
+    networks:
+      vpcbr:
+        ipv4_address: 10.89.2.2
+  mosdns:
+    image: irinesistiana/mosdns:latest
+    hostname: "mosdns"
+    container_name: mosdns
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+    links:
+      - "mihomo:mihomo"
+    volumes:
+      - "./mosdns:/etc/mosdns"
+    ports:
+      - "5335:5335/udp"
+      - "5335:5335/tcp"
+    networks:
+      vpcbr:
+        ipv4_address: 10.89.2.3
+  metacubexd:
+    container_name: metacubexd
+    image: ghcr.io/metacubex/metacubexd
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+    links:
+      - "mihomo:mihomo"
+    ports:
+      - "28000:80"
+    networks:
+      vpcbr:
+        ipv4_address: 10.89.2.4
+  # optional
+  mihomo:
+    image: docker.io/metacubex/mihomo
+    hostname: "mihomo"
+    container_name: mihomo
+    environment:
+      TZ: Asia/Shanghai
+    restart: unless-stopped
+    volumes:
+      - ./mihomo:/root/.config/mihomo
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "9098:9098"
+    networks:
+      vpcbr:
+        ipv4_address: 10.89.2.5
+networks:
+  vpcbr:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.89.2.0/24
+          gateway: 10.89.2.1
